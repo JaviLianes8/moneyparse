@@ -9,3 +9,6 @@ All notable changes to this project are documented here. The format follows
 ## [0.1.0]
 
 - First release.
+- `parse_money` turns a money string into an exact `Decimal` and an optional ISO currency
+  code, detecting the separator convention and resolving ambiguity with `decimal_comma`.
+- `MoneyParseError` for invalid, unknown or ambiguous input.
