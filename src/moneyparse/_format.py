@@ -8,6 +8,7 @@ from decimal import ROUND_HALF_EVEN, Decimal
 from typing import Literal
 
 from ._currencies import get_currency
+from ._exact import quantize
 from ._locales import Locale, get_locale
 from ._money import Money, _to_decimal
 from ._symbols import is_ambiguous
@@ -62,8 +63,9 @@ def format_money(
     ``parse(text, locale=locale, currency=code)``.
     """
     if isinstance(value, Money):
-        if currency is not None and value.currency is not None and currency != value.currency:
-            raise ValueError(f"value is in {value.currency}, not {currency}")
+        wanted = get_currency(currency).code if currency is not None else None
+        if wanted is not None and value.currency is not None and wanted != value.currency:
+            raise ValueError(f"value is in {value.currency}, not {wanted}")
         amount, code = value.amount, value.currency or currency
     else:
         amount, code = _to_decimal(value), currency
@@ -72,13 +74,13 @@ def format_money(
     places = digits if digits is not None else _default_places(amount, code)
     if places < 0:
         raise ValueError("digits must be zero or positive")
-    amount = amount.quantize(Decimal(1).scaleb(-places), rounding=rounding)
+    amount = quantize(amount, places, rounding)
     pattern = loc.accounting if accounting else loc.standard
     positive, _, negative = pattern.partition(";")
     chosen = (negative or "-" + positive) if amount < 0 else positive
     prefix, core, suffix = _split(chosen)
     separators = (loc.currency_decimal, loc.currency_group) if code else (loc.decimal, loc.group)
-    number = _digits(abs(amount), places, core, loc.min_grouping, separators)
+    number = _digits(amount.copy_abs(), places, core, loc.min_grouping, separators)
     marker = None if style == "plain" or code is None else _marker(code, style, loc)
     return _assemble(prefix, number, suffix, marker, loc.minus)
 

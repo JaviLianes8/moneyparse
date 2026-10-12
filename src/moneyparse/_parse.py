@@ -25,7 +25,7 @@ def parse_money(s: str, *, decimal_comma: bool | None = None) -> tuple[Decimal, 
     sign, text = _strip_sign(text.strip())
     amount = parse_amount(text, decimal_comma)
     if negative or sign:
-        amount = -amount
+        amount = amount.copy_negate()
     return amount, currency
 
 

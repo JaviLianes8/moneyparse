@@ -11,9 +11,10 @@ from ._errors import (
     MinorUnitError,
     MoneyParseError,
 )
+from ._exact import exact, fits, quantize
 from ._locales import Locale, get_locale
 from ._money import Money
-from ._number import FILLERS, parse_number
+from ._number import parse_number
 from ._symbols import resolve_symbol
 from ._tokens import clean, peel
 
@@ -49,7 +50,7 @@ def parse(
             meaning (``$`` is CAD in ``en-CA``, ``kr`` is SEK in ``sv-SE``).
         decimal: Explicit decimal separator; overrides the locale.
         group: Explicit grouping separator (default: the other of ``.`` and ``,``).
-            Spaces and apostrophes always group.
+            Alone it may only be ``.`` or ``,``; spaces and apostrophes always group.
         magnitude: Accept a scale suffix: ``k`` / ``thousand``, ``m`` / ``M`` /
             ``mn`` / ``million``, ``b`` / ``bn`` / ``billion``, ``t`` / ``tn`` /
             ``trillion`` (``"$1.2k"`` is 1200).
@@ -82,11 +83,13 @@ def parse(
     pairs = [(dec, grp)]
     if loc is not None and decimal is None and group is None:
         pairs.append((loc.currency_decimal, loc.currency_group))  # CLDR currencyGroup
-    amount = _first_reading(peeled.number, pairs, indian, code if strict_minor else None)
+    # A magnitude rescales the digits, so they cannot settle a separator by minor units.
+    settle = code if strict_minor and not peeled.exponent else None
+    amount = _first_reading(peeled.number, pairs, indian, settle)
     if peeled.exponent:
         amount = _scale(amount, peeled.exponent)
     if peeled.negative:
-        amount = -amount
+        amount = amount.copy_negate()
     if require_currency and code is None:
         raise MoneyParseError(f"no currency in {text!r}")
     if strict_minor and code is not None:
@@ -103,8 +106,8 @@ def _separators(
     if decimal is not None and decimal == group:
         raise ValueError("decimal and group separators must differ")
     if decimal is None and group is not None:
-        if group not in ".," and group not in FILLERS:
-            raise ValueError("pass decimal= together with an unusual group separator")
+        if group not in ".,":
+            raise ValueError("pass decimal= together with a group separator other than . or ,")
         decimal = "," if group == "." else "."
     if decimal is not None:
         return decimal, group
@@ -143,7 +146,7 @@ def _number(
         if units is None:
             raise
         as_decimal = parse_number(number, decimal=error.separator, indian=indian)
-        if as_decimal == as_decimal.quantize(Decimal(1).scaleb(-units)):
+        if fits(as_decimal, units):
             raise
         decimal = "." if error.separator == "," else ","
         return parse_number(number, decimal=decimal, group=error.separator, indian=indian)
@@ -156,9 +159,10 @@ def _resolve(
     local: dict[str, str] | None,
     home: str | None,
 ) -> str | None:
-    named = set(codes)
-    if len(named) > 1:
-        raise CurrencyConflictError(f"the text names several currencies: {sorted(named)}")
+    if len(set(codes)) > 1:
+        raise CurrencyConflictError(f"the text names several currencies: {sorted(set(codes))}")
+    if len(codes) > 1 or len(symbols) > 1:
+        raise MoneyParseError("a currency is named twice")
     code = codes[0] if codes else None
     if code is not None and hint is not None and code != hint:
         raise CurrencyConflictError(f"the text says {code} but currency={hint!r}")
@@ -170,13 +174,13 @@ def _resolve(
 
 
 def _scale(amount: Decimal, exponent: int) -> Decimal:
-    scaled = amount.scaleb(exponent)
-    return scaled.quantize(Decimal(1)) if scaled == scaled.to_integral_value() else scaled
+    scaled = exact(lambda: amount.scaleb(exponent))
+    return quantize(scaled, 0) if fits(scaled, 0) else scaled
 
 
 def _check_minor(amount: Decimal, code: str, text: str) -> None:
     units = get_currency(code).minor_units
     if units is None:
         return
-    if amount != amount.quantize(Decimal(1).scaleb(-units)):
+    if not fits(amount, units):
         raise MinorUnitError(f"{text!r} has more precision than {code} allows ({units} digits)")
