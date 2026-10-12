@@ -1,7 +1,7 @@
-"""Ground-truth fixtures built from Unicode CLDR 48 and ISO 4217.
+"""Ground-truth fixtures built from Unicode CLDR 48.2 and ISO 4217.
 
-Each formatted string follows the locale's CLDR 48 data in ``cldr-numbers-full``
-(github.com/unicode-org/cldr-json): ``symbols-numberSystem-latn`` (decimal, group,
+Each formatted string follows the locale's CLDR 48.2 data in ``cldr-numbers-full``
+(github.com/unicode-org/cldr-json 48.2.3): ``symbols-numberSystem-latn`` (decimal, group,
 minusSign), ``minimumGroupingDigits``, ``currencyFormats-numberSystem-latn``
 (standard and accounting patterns) and the locale's ``currencies`` symbols, plus the
 CLDR currencySpacing rule (a no-break space between a letter-edged currency and a

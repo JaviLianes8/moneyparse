@@ -1,4 +1,4 @@
-"""Contract: the complete promise, checked against CLDR 48 and ISO 4217 fixtures.
+"""Contract: the complete promise, checked against CLDR 48.2 and ISO 4217 fixtures.
 
 1. ``format_money`` writes exactly what CLDR specifies for each locale.
 2. ``parse`` reads every such string back to the exact Decimal and currency.
