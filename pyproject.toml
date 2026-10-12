@@ -4,14 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "moneyparse"
-version = "0.1.0"
-description = "Parse human money strings into exact Decimal amounts with currency, handling both separator conventions"
+version = "0.2.0"
+description = "Parse, find and format money strings as exact Decimal amounts with ISO 4217 currency and CLDR locale rules"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Javier Lianes", email = "javier@lianes8studio.com" }]
-keywords = []
+keywords = ["money", "currency", "parse", "decimal", "iso4217", "cldr", "locale", "price"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -22,6 +22,9 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["ruff", "mypy", "pytest", "build", "twine"]
+
+[project.scripts]
+moneyparse = "moneyparse._cli:main"
 
 [project.urls]
 Homepage = "https://lianes8studio.com"
