@@ -8,7 +8,7 @@ Main entry points:
 - :func:`parse_money` is the first release's tuple-returning parser, unchanged.
 
 Currency data is ISO 4217 (embedded, see :data:`ISO4217_PUBLISHED`); locale data
-is Unicode CLDR 48. There are no dependencies and floats are never used.
+is Unicode CLDR 48.2. There are no dependencies and floats are never used.
 """
 
 from __future__ import annotations

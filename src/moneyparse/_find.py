@@ -25,8 +25,10 @@ def _symbol_regex(symbol: str) -> str:
 
 
 _CURRENCY = "|".join(
-    [_symbol_regex(symbol) for symbol in SYMBOLS] + [rf"\b{c.code}\b" for c in currencies()]
+    [_symbol_regex(symbol) for symbol in SYMBOLS]
+    + [rf"(?<![A-Za-z]){c.code}(?![A-Za-z])" for c in currencies()]
 )
+_MINUS = r"[-\N{MINUS SIGN}]"
 _NUMBER = r"\d+(?:(?:[.,'\u2019_]|[ \xa0\u202f\u2009](?=\d{3}(?!\d)))\d+)*"
 _MAGNITUDE = "|".join(sorted(MAGNITUDES, key=len, reverse=True))
 
@@ -35,9 +37,13 @@ def _pattern(magnitude: bool) -> re.Pattern[str]:
     mag = rf"(?:{_SPACE}?(?:{_MAGNITUDE})(?![^\W\d_]))?" if magnitude else ""
     return re.compile(
         rf"(?P<open>\()?(?:(?<![\w-])[-\u2212+]{_SPACE}?)?"
-        rf"(?P<pre>{_CURRENCY})?{_SPACE}?(?:[-\u2212]{_SPACE}?)?"
+        # Without a leading currency, a minus glued to a word or number is a hyphen
+        # or a range ("5-10 EUR", "x-5 EUR"), not a sign.
+        rf"(?P<pre>{_CURRENCY})?{_SPACE}?(?:(?(pre)|(?<![\w-])){_MINUS}{_SPACE}?)?"
         rf"(?<![\d.,])(?P<num>{_NUMBER}){mag}"
-        rf"(?:{_SPACE}?(?P<post>{_CURRENCY}))?(?:[-\u2212](?![\d\w]))?(?P<close>\))?"
+        rf"(?:{_SPACE}?(?P<post>{_CURRENCY}))?"
+        # A trailing minus followed by another amount is a range ("$5-$10").
+        rf"(?:{_MINUS}(?![\d\w]|{_SPACE}?(?:\d|{_CURRENCY})))?(?P<close>\))?"
         # Never stop in the middle of a word or a number ("$1.2k", "$1.25.3").
         r"(?![^\W_]|[.,]\d)"
     )

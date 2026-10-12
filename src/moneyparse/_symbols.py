@@ -1,6 +1,6 @@
 """Currency symbols and the policy that resolves them to ISO 4217 codes.
 
-Symbols come from Unicode CLDR 48 (``en`` standard and narrow symbols, plus every
+Symbols come from Unicode CLDR 48.2 (``en`` standard and narrow symbols, plus every
 symbol the embedded locales use for an active ISO 4217 code) and a few unambiguous
 forms in common use (``US$``, ``AU$``, ``S$``, ``JP¥``). A symbol either has a
 single default code or is ambiguous: ``$`` alone is the narrow symbol of 28
@@ -54,7 +54,7 @@ _SINGLE: dict[str, str] = {
     "Ft": "HUF", "Rp": "IDR", "RM": "MYR", "lei": "RON", "E£": "EGP",
     "L£": "LBP", "GH₵": "GHS", "FCFA": "XAF", "F CFA": "XOF", "CFPF": "XPF",
     "Cg.": "XCG", "CHF": "CHF",
-    # Further local symbols used by the embedded CLDR 48 locales (fr, es, pt, ...).
+    # Further local symbols used by the embedded CLDR 48.2 locales (fr, es, pt, ...).
     "$ AU": "AUD", "$ HK": "HKD", "$ NZ": "NZD", "$ SG": "SGD", "$AR": "ARS",
     "$AU": "AUD", "$BM": "BMD", "$BN": "BND", "$BZ": "BZD", "$CA": "CAD",
     "$CL": "CLP", "$CO": "COP", "$FJ": "FJD", "$MX": "MXN", "$NA": "NAD",

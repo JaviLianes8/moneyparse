@@ -74,11 +74,11 @@ def _detect(text: str, raw: str) -> tuple[str | None, str | None]:
     before, _, after = text.partition(sep)
     head = "".join(char for char in before if char not in FILLERS)
     filler_grouped = len(head) != len(before)
-    if filler_grouped or len(after) != 3 or not head or head[0] == "0" or len(head) > 3:
+    if filler_grouped or len(after) != 3 or not head or head == "0" or len(head) > 3:
         return sep, other
     raise AmbiguousSeparatorError(
         f"ambiguous separator in {raw.strip()!r}: {head}{sep}{after} may group thousands "
-        "or mark decimals; pass locale=, decimal= or decimal_comma=",
+        "or mark decimals; pass locale= or decimal=",
         separator=sep,
     )
 

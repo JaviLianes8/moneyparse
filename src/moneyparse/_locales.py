@@ -1,6 +1,6 @@
 """Number and currency conventions of common locales, from Unicode CLDR 48.
 
-Source: CLDR 48 JSON (github.com/unicode-org/cldr-json, ``cldr-numbers-full``),
+Source: CLDR 48.2 JSON (github.com/unicode-org/cldr-json 48.2.3, ``cldr-numbers-full``),
 ``symbols-numberSystem-latn``, ``minimumGroupingDigits``,
 ``currencyFormats-numberSystem-latn`` (standard and accounting) and the locale's own
 currency symbols. ``_SEPARATORS`` columns: tag, decimal, group, minus sign, minimum
@@ -103,15 +103,15 @@ class Locale:
         min_grouping: CLDR ``minimumGroupingDigits``; 2 means four-digit integers
             stay ungrouped (es-ES writes ``1234,56``).
         currency: The locale's home currency code.
-        currency_decimal: Decimal separator inside currency amounts (CLDR
-            ``currencyDecimal``; ``.`` in fr-CH, else the same as ``decimal``).
-        currency_group: Grouping separator inside currency amounts (CLDR
-            ``currencyGroup``; ``.`` in de-AT, else the same as ``group``).
         standard: CLDR standard currency pattern.
         accounting: CLDR accounting currency pattern.
         symbols: How the locale writes its home currency, USD and EUR, as
             ``(symbol, code)`` pairs; a pair whose symbol equals the code means the
             locale writes the bare ISO code (en-AU writes ``USD 5.00``).
+        currency_decimal: Decimal separator inside currency amounts (CLDR
+            ``currencyDecimal``; ``.`` in fr-CH, else the same as ``decimal``).
+        currency_group: Grouping separator inside currency amounts (CLDR
+            ``currencyGroup``; ``.`` in de-AT, else the same as ``group``).
     """
 
     tag: str

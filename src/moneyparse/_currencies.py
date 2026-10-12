@@ -55,7 +55,7 @@ def get_currency(code: str | int) -> Currency:
     Raises:
         UnknownCurrencyError: The code is not in the embedded table.
     """
-    if isinstance(code, bool):
+    if isinstance(code, bool) or not isinstance(code, (int, str)):
         raise UnknownCurrencyError(f"unknown ISO 4217 currency: {code!r}")
     if isinstance(code, int):
         found = _BY_NUMERIC.get(f"{code:03d}") if 0 <= code <= 999 else None

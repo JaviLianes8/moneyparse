@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from ._errors import AmbiguousSeparatorError
 from ._number import parse_number
 
 
@@ -15,6 +16,10 @@ def parse_amount(raw: str, decimal_comma: bool | None) -> Decimal:
     their grouping, exactly as in the first release.
     """
     if decimal_comma is None:
-        return parse_number(raw, strict_fillers=False)
+        try:
+            return parse_number(raw, strict_fillers=False)
+        except AmbiguousSeparatorError as error:
+            message = f"{error} (or decimal_comma=)"
+            raise AmbiguousSeparatorError(message, error.separator) from None
     decimal, group = (",", ".") if decimal_comma else (".", ",")
     return parse_number(raw, decimal=decimal, group=group, strict_fillers=False)
