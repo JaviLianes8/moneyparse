@@ -25,7 +25,7 @@ parse("12.50", currency="EUR")  # the hint fills a missing currency
 - **ISO 4217 codes**, before or after the number, any case: `USD 10`, `10 usd`.
 - **Unambiguous symbols**: `€`, `£` (GBP), `₹`, `₩` (KRW), `₽`, `₺`, `₪`, `R$`,
   `CA$`, `US$`, `A$`, `zł`, `Kč`, `Ft`, `Rp`, `CHF`, `$US`, `£GB` and every other
-  symbol CLDR 48 uses in the embedded locales.
+  symbol CLDR 48.2 uses in the embedded locales.
 - **Ambiguous symbols**: `$`, `¥`, `￥`, `kr`, `kr.`, `Rs`, `Rs.`, `C$`. They resolve
   through, in order: the `currency=` hint (which must be one of the symbol's
   candidates), the locale's own symbols (`$` is USD in `de-DE`, CAD in `en-CA`), the
@@ -41,7 +41,7 @@ parse("12.50", currency="EUR")  # the hint fills a missing currency
 | nothing | detected | detected |
 | `locale="de-DE"` | CLDR decimal (and `currencyDecimal`) | CLDR group (and `currencyGroup`) |
 | `decimal=","` | `,` | `.` unless `group=` says otherwise |
-| `group="."` | the other of `.` and `,` | `.` |
+| `group="."` | the other of `.` and `,` | `.` (any other `group` needs `decimal=`) |
 
 Spaces (plain, no-break U+00A0, narrow no-break U+202F, thin), apostrophes (`'` and
 the typographic one) and underscores always group digits. Groups must be well formed:
@@ -79,12 +79,16 @@ parse("€3.5 bn", magnitude=True)  # 3500000000 EUR
 ### Minor units
 
 `strict_minor=True` rejects amounts the currency cannot hold in its ISO 4217 minor
-units with `MinorUnitError`: `¥1.5` (JPY has 0), `$0.001` (USD has 2). Trailing
-zeros are fine (`10.500 USD` is 10.50). Under `strict_minor`, the currency also
-settles a separator when only one reading is valid: `parse("$1,234",
-currency="USD", strict_minor=True)` is 1234 USD because 1.234 USD has a tenth of a
-cent; `10.500 USD` stays ambiguous. Without `strict_minor` nothing is assumed:
-`$3.459` is a real fuel price.
+units with `MinorUnitError`: `¥1.5` (JPY has 0), `$0.001` (USD has 2). The check
+is on the value, so trailing zeros are fine once the separators are known:
+`parse("10.500 USD", decimal=".", strict_minor=True)` is 10.500 USD.
+
+Under `strict_minor`, the currency also settles an ambiguous separator when only one
+reading is valid: `parse("$1,234", currency="USD", strict_minor=True)` is 1234 USD
+because 1.234 USD would hold a tenth of a cent. `10.500 USD` stays ambiguous (10.50
+is a valid amount too), and so does any amount with a magnitude suffix. Without
+`strict_minor` nothing is assumed, since prices such as `$3.459` per gallon of fuel
+are real: pass `locale=` or `decimal=` for those.
 
 ## 2. Finding amounts in text: `find_money`
 
@@ -97,8 +101,9 @@ find_money(text, *, currency=None, locale=None, decimal=None, group=None,
 Each `MoneyMatch` has `money`, `start`, `end` and `text`, with
 `text == source[start:end]`. Only amounts next to a symbol or an upper-case ISO code
 count (lower-case `all`, `try`, `top` are words), unless `require_currency=False`.
-Matches never stop inside a word or a number (`$1.2k` without `magnitude`, `A4 USD`)
-and a range such as `€5-10` is not a negative.
+Codes may touch the digits (`EUR5`, `5EUR`). Matches never stop inside a word or a
+number (`$1.2k` without `magnitude`, `A4 USD`), and a hyphen or range is not a
+negative: `5-10 EUR`, `$5-$10`, `x-5 EUR` and `555-1234` give no minus sign.
 
 ```python
 text = "Total €1.234,56, fee USD 3.99, refund ($12.00)"
@@ -116,7 +121,7 @@ format_money(value, currency=None, *, locale="en-US", style="symbol",
              accounting=False, digits=None, rounding=ROUND_HALF_EVEN) -> str
 ```
 
-The output follows CLDR 48 for the locale: standard or accounting pattern, decimal
+The output follows CLDR 48.2 for the locale: standard or accounting pattern, decimal
 and grouping separators (including `currencyDecimal` and `currencyGroup`), the minus
 sign, `minimumGroupingDigits` (es-ES writes `1234,56 €`), Indian grouping, and the
 currencySpacing rule (a no-break space between a letter-edged symbol and a digit).
@@ -170,7 +175,7 @@ ValueError
   `Currency(code, numeric, minor_units, name)`; `currencies()` lists all 178 active
   codes of ISO 4217 List One as published by SIX on 2026-09-17
   (`ISO4217_PUBLISHED`). Funds and metals with "N.A." minor units have `None`.
-- `get_locale("de-CH")` returns the embedded CLDR 48 data; `locales()` lists the 33
+- `get_locale("de-CH")` returns the embedded CLDR 48.2 data; `locales()` lists the 33
   tags: cs-CZ, da-DK, de-AT, de-CH, de-DE, en-AU, en-CA, en-GB, en-IN, en-US, es-ES,
   es-MX, fi-FI, fr-CA, fr-CH, fr-FR, hi-IN, id-ID, it-CH, it-IT, ja-JP, ko-KR, nb-NO,
   nl-NL, pl-PL, pt-BR, pt-PT, ru-RU, sv-SE, th-TH, tr-TR, uk-UA, zh-CN. A bare

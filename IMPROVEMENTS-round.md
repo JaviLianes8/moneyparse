@@ -7,7 +7,7 @@ USD) and auto-detected separators. Every item is additive: `parse_money` keeps i
 results, so code written against `0.1.0` keeps working.
 
 Ground truth: ISO 4217 List One (SIX, published 2026-09-17) for codes, numeric
-codes and minor units; Unicode CLDR 48 (`cldr-json`, `cldr-numbers-full`) for
+codes and minor units; Unicode CLDR 48.2 (`cldr-json`, `cldr-numbers-full`) for
 separators, minus signs, grouping, currency patterns and symbols.
 
 ## Shipped in this round (0.2.0)
@@ -34,14 +34,14 @@ separators, minus signs, grouping, currency patterns and symbols.
    parentheses, the sign on either side of the symbol (`CHF-1'234.50`,
    `€ -1.234,56`), exactly one per amount.
 
-5. **Formatting back.** `format_money` / `Money.format` follow CLDR 48 exactly:
+5. **Formatting back.** `format_money` / `Money.format` follow CLDR 48.2 exactly:
    standard and accounting patterns, currency separators, locale minus sign,
    `minimumGroupingDigits`, Indian grouping, currencySpacing. The symbol choice
    never emits a symbol the reader could not resolve. Every output parses back.
 
 6. **Finding amounts in free text.** `find_money` returns `MoneyMatch` objects with
    exact spans, needs a currency marker by default, never stops inside a word or a
-   number, and does not read a range (`€5-10`) as a negative.
+   number, and does not read a hyphen or range (`5-10 EUR`, `$5-$10`) as a negative.
 
 7. **A frozen `Money` type.** Exact `Decimal` amount, ISO code, same-currency
    arithmetic and ordering (`CurrencyMismatchError` otherwise), no floats,
@@ -67,16 +67,17 @@ separators, minus signs, grouping, currency patterns and symbols.
 ## Notes from the Babel oracle
 
 Babel 2.18 output parses back exactly in all 33 locales. Where the formatted text
-differs, `moneyparse` follows CLDR 48 and Babel does not: Babel ignores
+differs, `moneyparse` follows CLDR 48.2 and Babel does not: Babel ignores
 `minimumGroupingDigits` (es-ES `1234,50 €`), the locale minus sign (sv-SE
-U+2212) and currencySpacing (`USD 5.00`), and ships older data for de-CH, it-CH
-and fr-CH grouping.
+U+2212) and currencySpacing (`USD 5.00`), and ships data older than CLDR 48.2
+(cldr-json 48.2.3) for de-CH, it-CH and fr-CH grouping: 48.2 changed the fr-CH
+group from U+202F to the apostrophe.
 
 ## Considered and deliberately deferred
 
 - **Currency words** (`5 dollars`, `10 euros`). Plural rules and translations per
   language would need a large table; codes and symbols cover structured text.
-- **Assuming `$` is USD by default.** Rejected: it is the symbol of 28 currencies.
+- **Assuming `$` is USD by default.** Rejected: it is the symbol of 29 currencies.
   A `locale` or `currency` hint makes the intent explicit at no cost.
 - **Arabic and Hebrew formatting.** Parsing ignores bidi marks and reads Arabic
   digits, but formatting RTL patterns needs more than this library should carry.

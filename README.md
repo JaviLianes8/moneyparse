@@ -4,7 +4,7 @@ Parse, find and format money strings as exact `Decimal` amounts with their ISO 4
 currency. It reads `1.234,56 €`, `$1,234.56`, `CHF-1'234.50`, `(1,234.00)`,
 `₹1,23,45,678.90` and `1 234,56 kr`, finds amounts inside free text with their
 positions, and writes amounts back the way a locale does. Separator rules, minus
-signs and currency patterns come from Unicode CLDR 48; codes, numeric codes and minor
+signs and currency patterns come from Unicode CLDR 48.2; codes, numeric codes and minor
 units come from the ISO 4217 list published on 2026-09-17. No dependencies, no floats.
 
 ## Install
@@ -45,7 +45,7 @@ typed error instead of guessing:
   point two three four in `de-DE`. Without `locale=` or `decimal=` it raises
   `AmbiguousSeparatorError`. Strings with both marks (`1.234,56`), repeated groups
   (`1,234,567`) or a fraction that is not three digits (`12,50`) are read directly.
-- **Symbols.** `$` is the narrow symbol of 28 currencies, `¥` of JPY and CNY, `kr` of
+- **Symbols.** `$` is the narrow symbol of 29 currencies, `¥` of JPY and CNY, `kr` of
   four. Without `currency=` or a `locale=` that gives the symbol a meaning (`$` is
   CAD in `en-CA`, `kr` is SEK in `sv-SE`), it raises `AmbiguousCurrencyError` with
   the candidate codes. Unambiguous symbols (`€`, `£`, `₹`, `R$`, `zł`, `CA$`) and ISO
