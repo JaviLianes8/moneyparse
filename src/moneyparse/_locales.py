@@ -14,6 +14,10 @@ from dataclasses import dataclass
 
 from ._errors import UnknownLocaleError
 
+# CLDR ``currencyDecimal`` / ``currencyGroup``: separators that replace the plain
+# ones inside currency amounts. Only these two embedded locales define them.
+_CURRENCY_SEPARATORS = {"de-AT": (",", "."), "fr-CH": (".", "'")}
+
 _SEPARATORS = """\
 en-US|.|,|-|1|USD|$|$|€
 en-GB|.|,|-|1|GBP|£|US$|€
@@ -99,6 +103,10 @@ class Locale:
         min_grouping: CLDR ``minimumGroupingDigits``; 2 means four-digit integers
             stay ungrouped (es-ES writes ``1234,56``).
         currency: The locale's home currency code.
+        currency_decimal: Decimal separator inside currency amounts (CLDR
+            ``currencyDecimal``; ``.`` in fr-CH, else the same as ``decimal``).
+        currency_group: Grouping separator inside currency amounts (CLDR
+            ``currencyGroup``; ``.`` in de-AT, else the same as ``group``).
         standard: CLDR standard currency pattern.
         accounting: CLDR accounting currency pattern.
         symbols: How the locale writes its home currency, USD and EUR, as
@@ -115,6 +123,8 @@ class Locale:
     standard: str
     accounting: str
     symbols: tuple[tuple[str, str], ...]
+    currency_decimal: str
+    currency_group: str
 
     @property
     def indian_grouping(self) -> bool:
@@ -137,9 +147,11 @@ def _load() -> dict[str, Locale]:
         pairs = ((home_sym, home), (usd_sym, "USD"), (eur_sym, "EUR"))
         symbols = tuple(dict.fromkeys(pairs))
         standard, accounting = patterns[tag]
+        cur_dec, cur_grp = _CURRENCY_SEPARATORS.get(tag, (dec, grp))
         table[tag.lower()] = Locale(
-            tag, dec, grp, minus, int(min_group), home, standard, accounting, symbols
-        )
+            tag, dec, grp, minus, int(min_group), home, standard, accounting, symbols,
+            cur_dec, cur_grp,
+        )  # fmt: skip
     return table
 
 

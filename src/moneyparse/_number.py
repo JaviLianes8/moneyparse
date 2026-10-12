@@ -47,17 +47,16 @@ def parse_number(
     checking their grouping, as the first release did.
     """
     text = ascii_digits(raw.strip())
-    dec_char = decimal if decimal is not None else "."
-    grp_char = group if group is not None else ("," if dec_char == "." else ".")
-    if decimal is None and group is None:
-        grp_char = ","
-    text = text.replace(_ARABIC_DECIMAL, dec_char).replace(_ARABIC_GROUP, grp_char)
+    if decimal is None and (_ARABIC_DECIMAL in text or _ARABIC_GROUP in text):
+        decimal, group = _ARABIC_DECIMAL, _ARABIC_GROUP  # their roles are unambiguous
+    if decimal is not None and group is None:
+        group = {",": ".", ".": ","}.get(decimal)
+    if decimal is not None:
+        text = text.replace(_ARABIC_DECIMAL, decimal).replace(_ARABIC_GROUP, group or "")
     if not strict_fillers:
         text = "".join(char for char in text if char not in FILLERS)
     if decimal is None:
         decimal, group = _detect(text, raw)
-    elif group is None:
-        group = grp_char if grp_char != decimal else None
     return _build(text, decimal, group, indian, raw)
 
 
@@ -79,7 +78,8 @@ def _detect(text: str, raw: str) -> tuple[str | None, str | None]:
         return sep, other
     raise AmbiguousSeparatorError(
         f"ambiguous separator in {raw.strip()!r}: {head}{sep}{after} may group thousands "
-        "or mark decimals; pass locale=, decimal= or decimal_comma="
+        "or mark decimals; pass locale=, decimal= or decimal_comma=",
+        separator=sep,
     )
 
 
@@ -88,7 +88,10 @@ def _build(text: str, decimal: str | None, group: str | None, indian: bool, raw:
         raise MoneyParseError(f"more than one decimal separator in {raw!r}")
     integer, _, fraction = text.partition(decimal) if decimal else (text, "", "")
     if fraction and not fraction.isdigit():
-        raise MoneyParseError(f"not a numeric money value: {raw!r}")
+        raise MoneyParseError(
+            f"not a numeric money value: {raw!r} (digits must follow the decimal "
+            f"separator {decimal!r}; check locale= or decimal=)"
+        )
     digits = _ungroup(integer, group, indian, raw)
     if not digits and not fraction:
         raise MoneyParseError(f"not a numeric money value: {raw!r}")
@@ -103,7 +106,13 @@ def _ungroup(integer: str, group: str | None, indian: bool, raw: str) -> str:
     if not separators:
         return integer
     allowed = FILLERS | ({group} if group else set())
-    if len(separators) > 1 or not separators <= allowed:
+    stray = separators - allowed
+    if stray and all(char in ".," for char in stray):
+        raise MoneyParseError(
+            f"unexpected {''.join(sorted(stray))!r} in {raw!r}: the grouping separator "
+            f"here is {group!r}; check locale= or decimal="
+        )
+    if len(separators) > 1 or stray:
         raise MoneyParseError(f"not a numeric money value: {raw!r}")
     groups = integer.split(separators.pop())
     if not _well_grouped(groups) and not (indian and _lakh_grouped(groups)):

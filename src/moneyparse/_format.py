@@ -77,7 +77,8 @@ def format_money(
     positive, _, negative = pattern.partition(";")
     chosen = (negative or "-" + positive) if amount < 0 else positive
     prefix, core, suffix = _split(chosen)
-    number = _digits(abs(amount), places, core, loc)
+    separators = (loc.currency_decimal, loc.currency_group) if code else (loc.decimal, loc.group)
+    number = _digits(abs(amount), places, core, loc.min_grouping, separators)
     marker = None if style == "plain" or code is None else _marker(code, style, loc)
     return _assemble(prefix, number, suffix, marker, loc.minus)
 
@@ -97,20 +98,23 @@ def _split(pattern: str) -> tuple[str, str, str]:
     return pattern[: found.start()], found.group(), pattern[found.end() :]
 
 
-def _digits(amount: Decimal, places: int, core: str, loc: Locale) -> str:
+def _digits(
+    amount: Decimal, places: int, core: str, min_grouping: int, separators: tuple[str, str]
+) -> str:
+    decimal, group = separators
     text = f"{amount:.{places}f}"
     integer, _, fraction = text.partition(".")
     pieces = core.split(".")[0].split(",")
     primary = len(pieces[-1]) if len(pieces) > 1 else 0
     secondary = len(pieces[-2]) if len(pieces) > 2 else primary
-    if primary and len(integer) >= primary + loc.min_grouping:
+    if primary and len(integer) >= primary + min_grouping:
         groups = [integer[-primary:]]
         rest = integer[:-primary]
         while rest:
             groups.insert(0, rest[-secondary:])
             rest = rest[:-secondary]
-        integer = loc.group.join(groups)
-    return f"{integer}{loc.decimal}{fraction}" if fraction else integer
+        integer = group.join(groups)
+    return f"{integer}{decimal}{fraction}" if fraction else integer
 
 
 def _marker(code: str, style: Style, loc: Locale) -> str:

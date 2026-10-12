@@ -5,7 +5,12 @@ from __future__ import annotations
 from decimal import Decimal
 
 from ._currencies import get_currency
-from ._errors import CurrencyConflictError, MinorUnitError, MoneyParseError
+from ._errors import (
+    AmbiguousSeparatorError,
+    CurrencyConflictError,
+    MinorUnitError,
+    MoneyParseError,
+)
 from ._locales import Locale, get_locale
 from ._money import Money
 from ._number import FILLERS, parse_number
@@ -50,10 +55,12 @@ def parse(
             ``trillion`` (``"$1.2k"`` is 1200).
         strict_minor: Reject amounts the currency cannot hold in its minor units
             (``"¥1.5"`` for JPY, ``"$0.001"`` for USD) with :class:`MinorUnitError`.
+            It also settles ``"$1,234"`` as 1234 USD, since 1.234 USD is invalid.
         require_currency: Raise :class:`MoneyParseError` when no currency results.
 
     Without ``locale`` or ``decimal`` the separator convention is detected, and a
-    string such as ``"1,234"`` raises :class:`AmbiguousSeparatorError`.
+    string such as ``"1,234"`` raises :class:`AmbiguousSeparatorError`. With a
+    locale, its CLDR currency separators are accepted too (``1.234,56`` in de-AT).
 
     Raises:
         MoneyParseError: Or one of its subclasses, for text that is not money.
@@ -70,9 +77,12 @@ def parse(
         raise MoneyParseError("empty money string")
     peeled = peel(cleaned, magnitude=magnitude)
     local = {clean(sym): code for sym, code in loc.symbols} if loc else None
-    code = _resolve(peeled.codes, peeled.symbols, hint, local)
+    code = _resolve(peeled.codes, peeled.symbols, hint, local, loc.currency if loc else None)
     indian = loc.indian_grouping if loc and decimal is None else False
-    amount = parse_number(peeled.number, decimal=dec, group=grp, indian=indian)
+    pairs = [(dec, grp)]
+    if loc is not None and decimal is None and group is None:
+        pairs.append((loc.currency_decimal, loc.currency_group))  # CLDR currencyGroup
+    amount = _first_reading(peeled.number, pairs, indian, code if strict_minor else None)
     if peeled.exponent:
         amount = _scale(amount, peeled.exponent)
     if peeled.negative:
@@ -103,11 +113,48 @@ def _separators(
     return None, None
 
 
+def _first_reading(
+    number: str, pairs: list[tuple[str | None, str | None]], indian: bool, code: str | None
+) -> Decimal:
+    """Try each (decimal, group) pair in order; the last failure propagates."""
+    unique = list(dict.fromkeys(pairs))
+    for dec, grp in unique[:-1]:
+        try:
+            return _number(number, dec, grp, indian, code)
+        except MoneyParseError:
+            continue
+    dec, grp = unique[-1]
+    return _number(number, dec, grp, indian, code)
+
+
+def _number(
+    number: str, dec: str | None, grp: str | None, indian: bool, strict_code: str | None
+) -> Decimal:
+    """Parse the digits. Under ``strict_minor`` the currency can settle ``1,234``.
+
+    When reading the mark as a decimal point would break the currency's minor units
+    (``1.234`` USD has a tenth of a cent) the grouping reading is the only valid
+    one. ``10.500`` USD stays ambiguous: 10.50 is a valid amount too.
+    """
+    try:
+        return parse_number(number, decimal=dec, group=grp, indian=indian)
+    except AmbiguousSeparatorError as error:
+        units = get_currency(strict_code).minor_units if strict_code else None
+        if units is None:
+            raise
+        as_decimal = parse_number(number, decimal=error.separator, indian=indian)
+        if as_decimal == as_decimal.quantize(Decimal(1).scaleb(-units)):
+            raise
+        decimal = "." if error.separator == "," else ","
+        return parse_number(number, decimal=decimal, group=error.separator, indian=indian)
+
+
 def _resolve(
     codes: tuple[str, ...],
     symbols: tuple[str, ...],
     hint: str | None,
     local: dict[str, str] | None,
+    home: str | None,
 ) -> str | None:
     named = set(codes)
     if len(named) > 1:
@@ -117,7 +164,7 @@ def _resolve(
         raise CurrencyConflictError(f"the text says {code} but currency={hint!r}")
     chosen = code or hint
     for symbol in symbols:
-        resolved = resolve_symbol(symbol, chosen, local)
+        resolved = resolve_symbol(symbol, chosen, local, home)
         chosen = chosen or resolved
     return chosen
 

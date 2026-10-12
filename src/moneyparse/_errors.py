@@ -22,7 +22,12 @@ class AmbiguousSeparatorError(MoneyParseError):
     ``"1,234"`` and ``"1.234"`` mean one thousand two hundred thirty-four in one
     convention and one point two three four in the other. Pass ``locale`` or
     ``decimal`` (or ``decimal_comma`` on :func:`parse_money`) to decide.
+    ``separator`` is the character that could play either role.
     """
+
+    def __init__(self, message: str, separator: str = "") -> None:
+        super().__init__(message)
+        self.separator = separator
 
 
 class AmbiguousCurrencyError(MoneyParseError):

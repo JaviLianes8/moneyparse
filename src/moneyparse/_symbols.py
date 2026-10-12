@@ -1,11 +1,12 @@
 """Currency symbols and the policy that resolves them to ISO 4217 codes.
 
-Symbols come from Unicode CLDR 48 (``en`` standard and narrow symbols, plus the
-local symbols of the embedded locales) and a few unambiguous forms in common use
-(``US$``, ``AU$``, ``S$``, ``JP¥``). A symbol either has a single default code or is
-ambiguous: ``$`` alone is the narrow symbol of 28 currencies, so it is never assumed
-to be USD. Ambiguous symbols need a ``currency`` hint or a ``locale`` whose CLDR
-data gives the symbol a meaning (``$`` is CAD in ``en-CA`` and USD in ``de``).
+Symbols come from Unicode CLDR 48 (``en`` standard and narrow symbols, plus every
+symbol the embedded locales use for an active ISO 4217 code) and a few unambiguous
+forms in common use (``US$``, ``AU$``, ``S$``, ``JP¥``). A symbol either has a
+single default code or is ambiguous: ``$`` alone is the narrow symbol of 28
+currencies, so it is never assumed to be USD. Ambiguous symbols need a ``currency``
+hint or a ``locale`` whose CLDR data gives the symbol a meaning (``$`` is CAD in
+``en-CA`` and USD in ``de``).
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ _DOLLARS = (
 _POUNDS = ("GBP", "FKP", "GIP", "SHP", "SSP", "SYP")
 _YEN = ("JPY", "CNY")
 _KRONA = ("DKK", "ISK", "NOK", "SEK")
-_RUPEE = ("INR", "LKR", "MUR", "NPR", "PKR")
+_RUPEE = ("INR", "LKR", "MUR", "NPR", "PKR", "SCR")
 
 _AMBIGUOUS: dict[str, tuple[str, ...]] = {
     "$": tuple(sorted(_DOLLARS)),
@@ -40,6 +41,8 @@ _DEFAULTS: dict[str, tuple[str, tuple[str, ...]]] = {
     "₩": ("KRW", ("KRW", "KPW")),
 }
 
+_TMT = "\N{CYRILLIC CAPITAL LETTER TE}\N{CYRILLIC CAPITAL LETTER EM}\N{CYRILLIC CAPITAL LETTER TE}"
+
 _SINGLE: dict[str, str] = {
     "US$": "USD", "$US": "USD", "$ US": "USD", "CA$": "CAD", "A$": "AUD",
     "AU$": "AUD", "NZ$": "NZD", "HK$": "HKD", "MX$": "MXN", "NT$": "TWD",
@@ -51,6 +54,17 @@ _SINGLE: dict[str, str] = {
     "Ft": "HUF", "Rp": "IDR", "RM": "MYR", "lei": "RON", "E£": "EGP",
     "L£": "LBP", "GH₵": "GHS", "FCFA": "XAF", "F CFA": "XOF", "CFPF": "XPF",
     "Cg.": "XCG", "CHF": "CHF",
+    # Further local symbols used by the embedded CLDR 48 locales (fr, es, pt, ...).
+    "$ AU": "AUD", "$ HK": "HKD", "$ NZ": "NZD", "$ SG": "SGD", "$AR": "ARS",
+    "$AU": "AUD", "$BM": "BMD", "$BN": "BND", "$BZ": "BZD", "$CA": "CAD",
+    "$CL": "CLP", "$CO": "COP", "$FJ": "FJD", "$MX": "MXN", "$NA": "NAD",
+    "$NZ": "NZD", "$SB": "SBD", "$SG": "SGD", "$SR": "SRD", "$TT": "TTD",
+    "$UY": "UYU", "$WS": "WST", "BM$": "BMD", "BR$": "BRL", "BS$": "BSD",
+    "BZ$": "BZD", "Bds$": "BBD", "FJ$": "FJD", "JM$": "JMD", "RD$": "DOP",
+    "SI$": "SBD", "CFP": "XPF", "FCFP": "XPF", "Cf": "XCG", "Cg": "XCG",
+    "Dkr": "DKK", "Ikr": "ISK", "Nkr": "NOK", "EG£": "EGP", "£FK": "FKP",
+    "£GB": "GBP", "£GI": "GIP", "£LB": "LBP", "UM": "MRU", "ZiG": "ZWG",
+    "元": "CNY", _TMT: "TMT",
 }  # fmt: skip
 
 
@@ -68,11 +82,17 @@ SYMBOLS: tuple[str, ...] = tuple(
 )
 
 
-def resolve_symbol(symbol: str, hint: str | None, local: Mapping[str, str] | None = None) -> str:
+def resolve_symbol(
+    symbol: str,
+    hint: str | None,
+    local: Mapping[str, str] | None = None,
+    home: str | None = None,
+) -> str:
     """Return the ISO code ``symbol`` stands for, given an optional hint and locale.
 
-    ``local`` maps symbols to codes as one CLDR locale uses them. A hint must be one
-    of the symbol's candidates; a locale meaning wins over the global default.
+    Order: the ``hint`` (which must be one of the symbol's candidates), then the
+    locale's own symbols (``local``, as CLDR writes them), then the locale's ``home``
+    currency when it is a candidate (``Rs`` in en-IN is INR), then the global default.
     """
     default, candidates = _candidates_of(symbol)
     if hint is not None:
@@ -81,6 +101,8 @@ def resolve_symbol(symbol: str, hint: str | None, local: Mapping[str, str] | Non
         raise CurrencyConflictError(f"symbol {symbol!r} cannot mean {hint}")
     if local and symbol in local:
         return local[symbol]
+    if home is not None and home in candidates:
+        return home
     if default is not None:
         return default
     raise AmbiguousCurrencyError(symbol, candidates)
