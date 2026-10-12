@@ -4,7 +4,30 @@ import moneyparse
 
 # The public API. Add every exported name here as the library grows; this list is the
 # contract and the test below fails if the module and this list disagree.
-PUBLIC_API: list[str] = ["MoneyParseError", "parse_money"]
+PUBLIC_API: list[str] = [
+    "ISO4217_PUBLISHED",
+    "AmbiguousCurrencyError",
+    "AmbiguousSeparatorError",
+    "Currency",
+    "CurrencyConflictError",
+    "CurrencyMismatchError",
+    "Locale",
+    "MinorUnitError",
+    "Money",
+    "MoneyError",
+    "MoneyMatch",
+    "MoneyParseError",
+    "UnknownCurrencyError",
+    "UnknownLocaleError",
+    "currencies",
+    "find_money",
+    "format_money",
+    "get_currency",
+    "get_locale",
+    "locales",
+    "parse",
+    "parse_money",
+]
 
 
 def test_all_lists_exactly_the_public_api() -> None:
